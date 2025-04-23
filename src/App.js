@@ -2,13 +2,14 @@ import React, { useState, useRef, useMemo, useCallback, useEffect } from 'react'
 import Tesseract from 'tesseract.js';
 import { parseCheckText } from './ocr-parser';
 import './App.css';
+import { Analytics } from '@vercel/analytics/react';
 
 function App() {
   // App state
   const [step, setStep] = useState(1); // 1: Upload, 2: Names, 3: Assign, 4: Review
   const [checkImage, setCheckImage] = useState(null);
   const [extractedItems, setExtractedItems] = useState([]);
-  const [tax, setTax] = useState('8.25'); // Default tax amount
+  const [tax, setTax] = useState('0.00'); // Default tax amount
   const [tip, setTip] = useState('0.00');
   const [total, setTotal] = useState('0.00');
   const [subtotal, setSubtotal] = useState('0.00');
@@ -735,6 +736,7 @@ function App() {
           </div>
         </div>
       )}
+      <Analytics />
     </div>
   );
 }
