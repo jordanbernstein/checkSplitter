@@ -24,6 +24,8 @@ function App() {
   const [shareText, setShareText] = useState({});
   const [isDragging, setIsDragging] = useState(false);
   const [tipPercent, setTipPercent] = useState(0);
+  const [showModal, setShowModal] = useState(false);
+  const [currentView, setCurrentView] = useState('simple');
 
   // Memoize calculated values
   const calculatedSubtotal = useMemo(() => {
@@ -46,8 +48,8 @@ function App() {
   const impliedPercentages = useMemo(() => {
     if (calculatedSubtotal <= 0) return { tax: '', tip: '' };
     return {
-      tax: `(${((tax / calculatedSubtotal) * 100).toFixed(1)}%)`,
-      tip: `(${((tip / calculatedSubtotal) * 100).toFixed(1)}%)`
+      tax: `(Implied Tax: ${((tax / calculatedSubtotal) * 100).toFixed(1)}%)`,
+      tip: `(Implied Tip: ${((tip / calculatedSubtotal) * 100).toFixed(1)}%)`
     };
   }, [calculatedSubtotal, tax, tip]);
 
@@ -341,43 +343,7 @@ function App() {
 
   // Share results
   const shareResults = () => {
-    // Create a detailed text summary
-    let detailedSummary = "RESTAURANT CHECK SPLIT (DETAILED)\n\n";
-    
-    Object.keys(finalSplit).forEach(member => {
-      const person = finalSplit[member];
-      detailedSummary += `${member}: ${formatCurrency(person.total)}\n`;
-      detailedSummary += `  Items: ${formatCurrency(person.itemTotal)}\n`;
-      detailedSummary += `  Tax: ${formatCurrency(person.taxShare)}\n`;
-      detailedSummary += `  Tip: ${formatCurrency(person.tipShare)}\n\n`;
-      
-      detailedSummary += "  Items details:\n";
-      person.items.forEach(item => {
-        detailedSummary += `    ${item.name}: ${formatCurrency(item.share)}`;
-        if (item.share !== item.price) {
-          detailedSummary += ` (shared: ${formatCurrency(item.price)})`;
-        }
-        detailedSummary += "\n";
-      });
-      detailedSummary += "\n";
-    });
-
-    // Create an abbreviated text summary
-    let abbreviatedSummary = "RESTAURANT CHECK SPLIT (SIMPLE)\n\n";
-    Object.keys(finalSplit).forEach(member => {
-      const person = finalSplit[member];
-      abbreviatedSummary += `${member}: ${formatCurrency(person.total)}\n`;
-    });
-    
-    // Set both summaries to state
-    setShareText({
-      detailed: detailedSummary,
-      abbreviated: abbreviatedSummary,
-      current: 'detailed' // Set initial view to detailed
-    });
-    
-    // Show the share modal
-    setShowShareModal(true);
+    setShowModal(true);
   };
 
   // Update tax and total
@@ -402,10 +368,32 @@ function App() {
     setTip(formatPrice(tipNum));
   };
 
+  const getClipboardText = (view) => {
+    if (view === 'simple') {
+      return `splityourcheck.com\n\n${Object.entries(finalSplit)
+        .map(([name, data]) => `${name}: $${data.total.toFixed(2)}`)
+        .join('\n')}`;
+    }
+
+    return `splityourcheck.com\n\n${Object.entries(finalSplit).map(([name, data]) => `${name}:
+Items: ${data.items.map(item => `\n  - ${item.name}: $${item.price.toFixed(2)} (Your share: $${item.share.toFixed(2)})`).join('')}
+Tax Share: $${data.taxShare.toFixed(2)}
+Tip Share: $${data.tipShare.toFixed(2)}
+Total: $${data.total.toFixed(2)}`).join('\n\n')}
+
+Implied Tax (%): ${((tax / calculatedSubtotal) * 100).toFixed(1)}%
+Implied Tip (%): ${((tip / calculatedSubtotal) * 100).toFixed(1)}%`;
+  };
+
+  // Add this function to handle view changes
+  const handleViewChange = (view) => {
+    setCurrentView(view);
+  };
+
   return (
     <div className="app">
       <header>
-        <h1>Restaurant Check Splitter</h1>
+        <h1>Split Your Check</h1>
         <div className="progress-bar">
           <div className={`step ${step >= 1 ? 'active' : ''}`}>Upload</div>
           <div className={`step ${step >= 2 ? 'active' : ''}`}>Names</div>
@@ -463,7 +451,7 @@ function App() {
         {step === 2 && (
           <div className="step-content">
             <h2>Who's in Your Party?</h2>
-            <p>Add everyone who shared the meal</p>
+            <p>Add everyone who shared the meal. You'll assign them to items in the next step.</p>
             
             {ocrError && (
               <div className="error-message">
@@ -501,7 +489,7 @@ function App() {
               <div className="check-header">
                 <h3>Check Details</h3>
               </div>
-              <p>Please review and correct any errors</p>
+              <p>Please review and correct any errors. Sometimes the receipt scan will include tip or tax amount as menu items!</p>
               
               <h3>Items</h3>
               
@@ -686,53 +674,47 @@ function App() {
       </main>
 
       <footer>
-        <p>Restaurant Check Splitter © 2025</p>
+        <p>splityourcheck.com © 2025</p>
       </footer>
-      {/* Share Modal */}
-      {showShareModal && (
-        <div className="modal-overlay">
-          <div className="share-modal">
+      {showModal && (
+        <div className="modal">
+          <div className="modal-content">
             <h2>Share Results</h2>
-            <div className="share-options">
+            <div className={`modal-actions ${currentView === 'detailed' ? 'detailed' : ''}`}>
               <button 
-                className={`share-option-btn ${shareText.current === 'detailed' ? 'active' : ''}`}
-                onClick={() => setShareText(prev => ({ ...prev, current: 'detailed' }))}>
-                Detailed View
-              </button>
-              <button 
-                className={`share-option-btn ${shareText.current === 'abbreviated' ? 'active' : ''}`}
-                onClick={() => setShareText(prev => ({ ...prev, current: 'abbreviated' }))}>
+                className={currentView === 'simple' ? 'active' : ''} 
+                onClick={() => handleViewChange('simple')}
+              >
                 Simple View
               </button>
-            </div>
-            <div className="modal-actions">
               <button 
-                onClick={() => {
-                  navigator.clipboard.writeText(shareText[shareText.current]);
-                  const button = document.querySelector('.modal-actions button:first-child');
-                  button.classList.add('copy-success');
-                  button.textContent = '✓ Copied!';
-                  setTimeout(() => {
-                    button.classList.remove('copy-success');
-                    button.textContent = 'Copy to Clipboard';
-                  }, 2000);
-                }}
-                data-tooltip="Copy the split details to your clipboard"
+                className={currentView === 'detailed' ? 'active' : ''} 
+                onClick={() => handleViewChange('detailed')}
               >
-                Copy to Clipboard
-              </button>
-              <button 
-                onClick={() => setShowShareModal(false)}
-                data-tooltip="Close this window"
-              >
-                Close
+                Detailed View
               </button>
             </div>
             <textarea 
               className="share-text" 
-              value={shareText[shareText.current]} 
+              value={getClipboardText(currentView)} 
               readOnly
             />
+            <div className="modal-buttons">
+              <button 
+                onClick={() => {
+                  navigator.clipboard.writeText(getClipboardText(currentView));
+                  const button = document.querySelector('.copy-btn');
+                  button.classList.add('copy-success');
+                  setTimeout(() => button.classList.remove('copy-success'), 2000);
+                }}
+                className="copy-btn"
+              >
+                Copy to Clipboard
+              </button>
+              <button onClick={() => setShowModal(false)} className="close-btn">
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -512,8 +512,9 @@ footer {
   margin-top: 10px;
   cursor: pointer;
 }
+
 /* Modal Styles */
-.modal-overlay {
+.modal {
   position: fixed;
   top: 0;
   left: 0;
@@ -524,109 +525,107 @@ footer {
   justify-content: center;
   align-items: center;
   z-index: 1000;
-  backdrop-filter: blur(4px);
 }
 
-.share-modal {
-  background-color: white;
-  border-radius: 8px;
+.modal-content {
+  background: white;
   padding: 20px;
+  border-radius: 8px;
   width: 90%;
   max-width: 600px;
   max-height: 90vh;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  font-family: Arial, Helvetica, sans-serif;
-  transform: scale(0.95);
-  opacity: 0;
-  animation: modalEnter 0.3s ease forwards;
-}
-
-@keyframes modalEnter {
-  to {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
-.share-modal h2 {
-  margin-top: 0;
-  margin-bottom: 15px;
-  font-family: Arial, Helvetica, sans-serif;
-  font-size: 1.4em;
-}
-
-.share-text {
-  flex: 1;
-  min-height: 300px;
-  padding: 10px;
-  border: 1px solid #ced4da;
-  border-radius: 4px;
-  font-family: Arial, Helvetica, sans-serif;
-  font-size: 0.9em;
-  line-height: 1.4;
-  white-space: pre;
-  overflow: auto;
-  margin-top: 15px;
 }
 
 .modal-actions {
   display: flex;
-  justify-content: space-between;
-  margin-bottom: 15px;
+  position: relative;
+  background-color: #e9ecef;
+  padding: 4px;
+  border-radius: 24px;
+  width: fit-content;
+  margin: 0 auto 16px;
 }
 
 .modal-actions button {
+  position: relative;
+  z-index: 1;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  background: none;
+  color: #495057;
+  font-size: 14px;
+  transition: color 0.3s ease;
+}
+
+.modal-actions button.active {
+  color: white;
+}
+
+.modal-actions::before {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: calc(50% - 4px);
+  height: calc(100% - 8px);
+  background-color: #007bff;
+  border-radius: 20px;
+  transition: transform 0.3s ease;
+}
+
+.modal-actions.detailed::before {
+  transform: translateX(100%);
+}
+
+.share-text {
+  width: 100%;
+  min-height: 200px;
+  margin-bottom: 16px;
+  padding: 8px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  resize: vertical;
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.modal-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.copy-btn, .close-btn {
   padding: 8px 16px;
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.copy-btn {
   background-color: #007bff;
   color: white;
-  margin-right: 8px;
 }
 
-.modal-actions button:last-child {
-  margin-right: 0;
+.close-btn {
+  background-color: #6c757d;
+  color: white;
 }
 
-.modal-actions button:hover {
-  background-color: #0056b3;
+.copy-btn:hover, .close-btn:hover {
+  opacity: 0.9;
 }
 
-.modal-actions button.active {
-  background-color: #0056b3;
-}
-
-.copy-success {
-  color: #28a745;
-  animation: checkmark 0.3s ease-in-out;
-}
-
-.tax-input-group {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 1;
-  justify-content: flex-end;
-}
-
-.implied-percent {
-  color: #6c757d;
-  font-size: 0.9em;
-  min-width: 60px;
-  text-align: right;
-}
-
-.tax-input-group input {
-  width: 100px;
-  padding: 8px;
-  border: 1px solid #ced4da;
-  border-radius: 4px;
-  text-align: right;
-  padding-right: 8px;
+.copy-btn.copy-success {
+  background-color: #28a745;
 }
 
 /* Enhance Input Interactions */
@@ -723,4 +722,40 @@ button:active:not(:disabled) {
   background-color: #007bff;
   color: white;
   border-color: #007bff;
+}
+
+.percentages {
+  font-size: 0.9em;
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.percentages i {
+  font-style: italic;
+  color: #888;
+}
+
+.tax-input-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.implied-percent {
+  color: #6c757d;
+  font-size: 0.9em;
+  min-width: 60px;
+  text-align: right;
+  font-style: italic;
+}
+
+.tax-input-group input {
+  width: 100px;
+  padding: 8px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  text-align: right;
+  padding-right: 8px;
 }
