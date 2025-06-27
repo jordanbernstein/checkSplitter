@@ -72,6 +72,16 @@ header h1 {
   background-color: #007bff;
 }
 
+.step.clickable:hover {
+  background-color: #0056b3;
+  color: white;
+  transform: translateY(-1px);
+}
+
+.step.clickable:active {
+  transform: translateY(0);
+}
+
 /* Main content */
 .step-content {
   background-color: white;
@@ -314,6 +324,75 @@ p {
   border-top: 1px solid #dee2e6;
   padding-top: 15px;
   font-weight: bold;
+}
+
+/* Tip Calculator */
+.tip-calculator {
+  margin: 15px 0;
+  padding: 12px;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  border: 1px solid #e9ecef;
+}
+
+.tip-calculator-header {
+  font-weight: bold;
+  font-size: 14px;
+  color: #495057;
+  margin-bottom: 10px;
+}
+
+.tip-calculator-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tip-toggle {
+  display: flex;
+  align-items: center;
+}
+
+.tip-toggle label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #495057;
+  cursor: pointer;
+}
+
+.tip-toggle input[type="checkbox"] {
+  margin: 0;
+}
+
+.tip-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.tip-percent-btn {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #007bff;
+  background-color: white;
+  color: #007bff;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.tip-percent-btn:hover {
+  background-color: #007bff;
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0,123,255,0.2);
+}
+
+.tip-percent-btn:active {
+  transform: translateY(0);
 }
 
 /* Step 3: Assign Items */

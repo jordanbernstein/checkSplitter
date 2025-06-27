@@ -6,7 +6,7 @@ import { Analytics } from '@vercel/analytics/react';
 
 function App() {
   // App state
-  const [step, setStep] = useState(1); // 1: Upload, 2: Names, 3: Assign, 4: Review
+  const [step, setStep] = useState(1); // 1: Upload, 2: Review, 3: Names, 4: Assign, 5: Split
   const [checkImage, setCheckImage] = useState(null);
   const [extractedItems, setExtractedItems] = useState([]);
   const [tax, setTax] = useState('0.00'); // Default tax amount
@@ -20,12 +20,10 @@ function App() {
   const [assignedItems, setAssignedItems] = useState({});
   const [finalSplit, setFinalSplit] = useState({});
   const fileInputRef = useRef(null);
-  const [showShareModal, setShowShareModal] = useState(false);
-  const [shareText, setShareText] = useState({});
   const [isDragging, setIsDragging] = useState(false);
-  const [tipPercent, setTipPercent] = useState(0);
   const [showModal, setShowModal] = useState(false);
   const [currentView, setCurrentView] = useState('simple');
+  const [tipIncludesTax, setTipIncludesTax] = useState(false);
 
   // Memoize calculated values
   const calculatedSubtotal = useMemo(() => {
@@ -270,7 +268,7 @@ function App() {
   const calculateSplit = useCallback(() => {
     const split = calculateFinalSplit();
     setFinalSplit(split);
-    setStep(4);
+    setStep(5);
   }, [calculateFinalSplit]);
 
   // Format price for display
@@ -368,6 +366,26 @@ function App() {
     setTip(formatPrice(tipNum));
   };
 
+  // Calculate tip based on percentage and tax inclusion preference
+  const calculateTipFromPercentage = (percentage) => {
+    const subtotalNum = parseFloat(calculatedSubtotal) || 0;
+    const taxNum = parseFloat(tax) || 0;
+    
+    // Don't calculate if no subtotal
+    if (subtotalNum <= 0) return;
+    
+    let baseAmount;
+    if (tipIncludesTax) {
+      baseAmount = subtotalNum + taxNum;
+    } else {
+      baseAmount = subtotalNum;
+    }
+    
+    const calculatedTip = (baseAmount * percentage / 100);
+    const formattedTip = formatPrice(calculatedTip);
+    setTip(formattedTip);
+  };
+
   const getClipboardText = (view) => {
     if (view === 'simple') {
       return `splityourcheck.com\n\n${Object.entries(finalSplit)
@@ -390,15 +408,49 @@ Implied Tip (%): ${((tip / calculatedSubtotal) * 100).toFixed(1)}%`;
     setCurrentView(view);
   };
 
+  // Handle navigation to specific step
+  const navigateToStep = (targetStep) => {
+    // Allow navigation to any previous step, or to the next step only
+    if (targetStep < step || targetStep === step + 1) {
+      setStep(targetStep);
+    }
+  };
+
   return (
     <div className="app">
       <header>
         <h1>Split Your Check</h1>
         <div className="progress-bar">
-          <div className={`step ${step >= 1 ? 'active' : ''}`}>Upload</div>
-          <div className={`step ${step >= 2 ? 'active' : ''}`}>Names</div>
-          <div className={`step ${step >= 3 ? 'active' : ''}`}>Assign</div>
-          <div className={`step ${step >= 4 ? 'active' : ''}`}>Review</div>
+          <div 
+            className={`step ${step >= 1 ? 'active' : ''} ${step !== 1 ? 'clickable' : ''}`}
+            onClick={() => navigateToStep(1)}
+          >
+            Upload
+          </div>
+          <div 
+            className={`step ${step >= 2 ? 'active' : ''} ${step !== 2 ? 'clickable' : ''}`}
+            onClick={() => navigateToStep(2)}
+          >
+            Review
+          </div>
+          <div 
+            className={`step ${step >= 3 ? 'active' : ''} ${step !== 3 ? 'clickable' : ''}`}
+            onClick={() => navigateToStep(3)}
+          >
+            Names
+          </div>
+          <div 
+            className={`step ${step >= 4 ? 'active' : ''} ${step !== 4 ? 'clickable' : ''}`}
+            onClick={() => navigateToStep(4)}
+          >
+            Assign
+          </div>
+          <div 
+            className={`step ${step >= 5 ? 'active' : ''} ${step !== 5 ? 'clickable' : ''}`}
+            onClick={() => navigateToStep(5)}
+          >
+            Split
+          </div>
         </div>
       </header>
 
@@ -444,14 +496,19 @@ Implied Tip (%): ${((tip / calculatedSubtotal) * 100).toFixed(1)}%`;
             <div className="skip-option">
               <button onClick={skipToManualEntry}>Skip to Manual Entry</button>
             </div>
+            
+            <div className="navigation-buttons">
+              <div></div>
+              <button onClick={() => setStep(2)}>Next</button>
+            </div>
           </div>
         )}
 
-        {/* Step 2: Party Members */}
+        {/* Step 2: Review Items */}
         {step === 2 && (
           <div className="step-content">
-            <h2>Who's in Your Party?</h2>
-            <p>Add everyone who shared the meal. You'll assign them to items in the next step.</p>
+            <h2>Review Your Check</h2>
+            <p>Please review and correct any errors. Sometimes the receipt scan will include tip or tax amount as menu items!</p>
             
             {ocrError && (
               <div className="error-message">
@@ -460,37 +517,7 @@ Implied Tip (%): ${((tip / calculatedSubtotal) * 100).toFixed(1)}%`;
               </div>
             )}
             
-            <div className="input-group">
-              <input
-                type="text"
-                placeholder="Enter name"
-                value={newMember}
-                onChange={(e) => setNewMember(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && addPartyMember()}
-              />
-              <button onClick={addPartyMember}>Add</button>
-            </div>
-            
-            <ul className="party-list">
-              {partyMembers.map((member, index) => (
-                <li key={index}>
-                  {member}
-                  <button 
-                    className="remove-btn" 
-                    onClick={() => removePartyMember(index)}
-                  >
-                    ×
-                  </button>
-                </li>
-              ))}
-            </ul>
-            
             <div className="check-review">
-              <div className="check-header">
-                <h3>Check Details</h3>
-              </div>
-              <p>Please review and correct any errors. Sometimes the receipt scan will include tip or tax amount as menu items!</p>
-              
               <h3>Items</h3>
               
               <div className="check-items">
@@ -561,6 +588,47 @@ Implied Tip (%): ${((tip / calculatedSubtotal) * 100).toFixed(1)}%`;
                   </div>
                 </div>
 
+                <div className="tip-calculator">
+                  <div className="tip-calculator-header">
+                    <span>Tip Calculator</span>
+                  </div>
+                  <div className="tip-calculator-content">
+                    <div className="tip-toggle">
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={tipIncludesTax}
+                          onChange={(e) => setTipIncludesTax(e.target.checked)}
+                        />
+                        <span>Tip percent includes tax</span>
+                      </label>
+                    </div>
+                    <div className="tip-buttons">
+                      <button 
+                        type="button"
+                        onClick={() => calculateTipFromPercentage(18)}
+                        className="tip-percent-btn"
+                      >
+                        18%
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => calculateTipFromPercentage(20)}
+                        className="tip-percent-btn"
+                      >
+                        20%
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => calculateTipFromPercentage(22)}
+                        className="tip-percent-btn"
+                      >
+                        22%
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="summary-row total-row">
                   <span data-tooltip="Final amount including tax and tip">Total:</span>
                   <span className="calculated-value">{formatPrice(total)}</span>
@@ -570,8 +638,46 @@ Implied Tip (%): ${((tip / calculatedSubtotal) * 100).toFixed(1)}%`;
             
             <div className="navigation-buttons">
               <button onClick={() => setStep(1)}>Back</button>
+              <button onClick={() => setStep(3)}>Next</button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 3: Party Members */}
+        {step === 3 && (
+          <div className="step-content">
+            <h2>Who's in Your Party?</h2>
+            <p>Add everyone who shared the meal. You'll assign them to items in the next step.</p>
+            
+            <div className="input-group">
+              <input
+                type="text"
+                placeholder="Enter name"
+                value={newMember}
+                onChange={(e) => setNewMember(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && addPartyMember()}
+              />
+              <button onClick={addPartyMember}>Add</button>
+            </div>
+            
+            <ul className="party-list">
+              {partyMembers.map((member, index) => (
+                <li key={index}>
+                  {member}
+                  <button 
+                    className="remove-btn" 
+                    onClick={() => removePartyMember(index)}
+                  >
+                    ×
+                  </button>
+                </li>
+              ))}
+            </ul>
+            
+            <div className="navigation-buttons">
+              <button onClick={() => setStep(2)}>Back</button>
               <button 
-                onClick={() => setStep(3)} 
+                onClick={() => setStep(4)} 
                 disabled={partyMembers.length === 0}
               >
                 Next
@@ -580,8 +686,8 @@ Implied Tip (%): ${((tip / calculatedSubtotal) * 100).toFixed(1)}%`;
           </div>
         )}
 
-        {/* Step 3: Assign Items */}
-        {step === 3 && (
+        {/* Step 4: Assign Items */}
+        {step === 4 && (
           <div className="step-content">
             <h2>Who Had What?</h2>
             <p>Assign each item to one or more people</p>
@@ -611,14 +717,14 @@ Implied Tip (%): ${((tip / calculatedSubtotal) * 100).toFixed(1)}%`;
             </div>
             
             <div className="navigation-buttons">
-              <button onClick={() => setStep(2)}>Back</button>
+              <button onClick={() => setStep(3)}>Back</button>
               <button onClick={calculateSplit}>Calculate Split</button>
             </div>
           </div>
         )}
 
-        {/* Step 4: Review Split */}
-        {step === 4 && (
+        {/* Step 5: Review Split */}
+        {step === 5 && (
           <div className="step-content">
             <h2>Final Split</h2>
             <p>Here's what everyone owes:</p>
@@ -666,7 +772,7 @@ Implied Tip (%): ${((tip / calculatedSubtotal) * 100).toFixed(1)}%`;
             </div>
             
             <div className="navigation-buttons">
-              <button onClick={() => setStep(3)}>Back</button>
+              <button onClick={() => setStep(4)}>Back</button>
               <button onClick={shareResults}>Share Results</button>
             </div>
           </div>
