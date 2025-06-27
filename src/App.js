@@ -24,6 +24,7 @@ function App() {
   const [showModal, setShowModal] = useState(false);
   const [currentView, setCurrentView] = useState('simple');
   const [tipIncludesTax, setTipIncludesTax] = useState(false);
+  const [selectedTipPercentage, setSelectedTipPercentage] = useState(null);
 
   // Memoize calculated values
   const calculatedSubtotal = useMemo(() => {
@@ -42,12 +43,33 @@ function App() {
     setTotal(totalNum.toFixed(2));
   }, [calculatedSubtotal, tax, tip]);
 
+  // Recalculate tip when tax inclusion preference changes
+  useEffect(() => {
+    if (selectedTipPercentage !== null) {
+      const subtotalNum = parseFloat(calculatedSubtotal) || 0;
+      const taxNum = parseFloat(tax) || 0;
+      
+      if (subtotalNum > 0) {
+        let baseAmount;
+        if (tipIncludesTax) {
+          baseAmount = subtotalNum + taxNum;
+        } else {
+          baseAmount = subtotalNum;
+        }
+        
+        const calculatedTip = (baseAmount * selectedTipPercentage / 100);
+        const formattedTip = formatPrice(calculatedTip);
+        setTip(formattedTip);
+      }
+    }
+  }, [tipIncludesTax, selectedTipPercentage, calculatedSubtotal, tax]);
+
   // Memoize implied percentages
   const impliedPercentages = useMemo(() => {
     if (calculatedSubtotal <= 0) return { tax: '', tip: '' };
     return {
-      tax: `(Implied Tax: ${((tax / calculatedSubtotal) * 100).toFixed(1)}%)`,
-      tip: `(Implied Tip: ${((tip / calculatedSubtotal) * 100).toFixed(1)}%)`
+      tax: `Implied Tax: ${((tax / calculatedSubtotal) * 100).toFixed(1)}%`,
+      tip: `Implied Tip (excl. tax): ${((tip / calculatedSubtotal) * 100).toFixed(1)}%`
     };
   }, [calculatedSubtotal, tax, tip]);
 
@@ -352,6 +374,7 @@ function App() {
   // Update tip and total
   const updateTipAndTotal = (newTip) => {
     setTip(newTip);
+    setSelectedTipPercentage(null); // Clear selection when manually editing
   };
 
   // Handle tax blur
@@ -384,6 +407,7 @@ function App() {
     const calculatedTip = (baseAmount * percentage / 100);
     const formattedTip = formatPrice(calculatedTip);
     setTip(formattedTip);
+    setSelectedTipPercentage(percentage);
   };
 
   const getClipboardText = (view) => {
@@ -600,28 +624,28 @@ Implied Tip (%): ${((tip / calculatedSubtotal) * 100).toFixed(1)}%`;
                           checked={tipIncludesTax}
                           onChange={(e) => setTipIncludesTax(e.target.checked)}
                         />
-                        <span>Tip percent includes tax</span>
+                        <span>Tip percentage includes tax</span>
                       </label>
                     </div>
                     <div className="tip-buttons">
                       <button 
                         type="button"
                         onClick={() => calculateTipFromPercentage(18)}
-                        className="tip-percent-btn"
+                        className={`tip-percent-btn ${selectedTipPercentage === 18 ? 'selected' : ''}`}
                       >
                         18%
                       </button>
                       <button 
                         type="button"
                         onClick={() => calculateTipFromPercentage(20)}
-                        className="tip-percent-btn"
+                        className={`tip-percent-btn ${selectedTipPercentage === 20 ? 'selected' : ''}`}
                       >
                         20%
                       </button>
                       <button 
                         type="button"
                         onClick={() => calculateTipFromPercentage(22)}
-                        className="tip-percent-btn"
+                        className={`tip-percent-btn ${selectedTipPercentage === 22 ? 'selected' : ''}`}
                       >
                         22%
                       </button>

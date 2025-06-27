@@ -51,25 +51,11 @@ header h1 {
   box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
-.step:not(:last-child):after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  right: -10px;
-  width: 20px;
-  height: 2px;
-  background-color: #e9ecef;
-}
-
 .step.active {
   background-color: #007bff;
   color: white;
   transform: translateY(-2px);
   box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-}
-
-.step.active:not(:last-child):after {
-  background-color: #007bff;
 }
 
 .step.clickable:hover {
@@ -328,11 +314,21 @@ p {
 
 /* Tip Calculator */
 .tip-calculator {
-  margin: 15px 0;
-  padding: 12px;
+  margin: 15px 0 15px auto;
+  padding: 12px 14px;
   background-color: #f8f9fa;
   border-radius: 6px;
   border: 1px solid #e9ecef;
+  width: 35%;
+  min-width: 200px;
+  max-width: 300px;
+}
+
+@media (max-width: 768px) {
+  .tip-calculator {
+    width: 100%;
+    margin: 15px 0;
+  }
 }
 
 .tip-calculator-header {
@@ -340,17 +336,28 @@ p {
   font-size: 14px;
   color: #495057;
   margin-bottom: 10px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+}
+
+.tip-helper-text {
+  display: none;
 }
 
 .tip-calculator-content {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
+  text-align: left;
 }
 
 .tip-toggle {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
 }
 
 .tip-toggle label {
@@ -367,13 +374,15 @@ p {
 }
 
 .tip-buttons {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 8px;
+  width: 100%;
 }
 
 .tip-percent-btn {
-  flex: 1;
-  padding: 8px 12px;
+  width: 100%;
+  padding: 8px 0;
   border: 1px solid #007bff;
   background-color: white;
   color: #007bff;
@@ -381,18 +390,25 @@ p {
   cursor: pointer;
   font-weight: bold;
   font-size: 14px;
+  text-align: center;
   transition: all 0.2s ease;
 }
 
-.tip-percent-btn:hover {
+.tip-percent-btn:hover:not(:disabled) {
   background-color: #007bff;
   color: white;
   transform: translateY(-1px);
   box-shadow: 0 2px 4px rgba(0,123,255,0.2);
 }
 
-.tip-percent-btn:active {
+.tip-percent-btn:active:not(:disabled) {
   transform: translateY(0);
+}
+
+.tip-percent-btn.selected {
+  background-color: #007bff;
+  color: white;
+  border-color: #007bff;
 }
 
 /* Step 3: Assign Items */
@@ -774,13 +790,6 @@ button:active:not(:disabled) {
   0% { transform: scale(0); }
   50% { transform: scale(1.2); }
   100% { transform: scale(1); }
-}
-
-.tip-buttons {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-left: 70px;
 }
 
 .tip-btn {
