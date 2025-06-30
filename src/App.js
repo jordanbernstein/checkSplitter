@@ -68,8 +68,8 @@ function App() {
   const impliedPercentages = useMemo(() => {
     if (calculatedSubtotal <= 0) return { tax: '', tip: '' };
     return {
-      tax: `Implied Tax: ${((tax / calculatedSubtotal) * 100).toFixed(1)}%`,
-      tip: `Implied Tip (excl. tax): ${((tip / calculatedSubtotal) * 100).toFixed(1)}%`
+      tax: `% Subtotal: ${((tax / calculatedSubtotal) * 100).toFixed(1)}%`,
+      tip: `% Subtotal: ${((tip / calculatedSubtotal) * 100).toFixed(1)}%`
     };
   }, [calculatedSubtotal, tax, tip]);
 
@@ -551,12 +551,16 @@ Implied Tip (%): ${((tip / calculatedSubtotal) * 100).toFixed(1)}%`;
                       type="text"
                       value={item.name}
                       onChange={(e) => updateItemValue(index, 'name', e.target.value)}
+                      onFocus={(e) => e.target.select()}
                     />
                     <input
-                      type="text"
+                      type="number"
+                      step="0.01"
+                      min="0"
                       value={item.price}
                       onChange={(e) => updateItemValue(index, 'price', e.target.value)}
                       onBlur={(e) => handlePriceBlur(index, e.target.value)}
+                      onFocus={(e) => e.target.select()}
                       tabIndex={0}
                     />
                     <button 
@@ -579,36 +583,44 @@ Implied Tip (%): ${((tip / calculatedSubtotal) * 100).toFixed(1)}%`;
               </button>
               
               <div className="check-summary">
-                <div className="summary-row">
+                <div className="summary-row subtotal-row">
                   <span data-tooltip="Sum of all items before tax and tip">Subtotal:</span>
-                  <span className="calculated-value">{formatPrice(subtotal)}</span>
+                  <div className="tax-input-group">
+                    <span className="calculated-value">${formatPrice(subtotal)}</span>
+                  </div>
                 </div>
                 <div className="summary-row">
                   <span data-tooltip="Total tax amount">Tax:</span>
                   <div className="tax-input-group">
-                    <span className="implied-percent">
-                      {impliedPercentages.tax}
-                    </span>
                     <input
-                      type="text"
+                      type="number"
+                      step="0.01"
+                      min="0"
                       value={tax}
                       onChange={(e) => updateTaxAndTotal(e.target.value)}
                       onBlur={(e) => handleTaxBlur(e.target.value)}
+                      onFocus={(e) => e.target.select()}
                     />
+                    <span className="implied-percent">
+                      {impliedPercentages.tax}
+                    </span>
                   </div>
                 </div>
                 <div className="summary-row">
                   <span data-tooltip="Tip amount for service">Tip:</span>
                   <div className="tax-input-group">
-                    <span className="implied-percent">
-                      {impliedPercentages.tip}
-                    </span>
                     <input
-                      type="text"
+                      type="number"
+                      step="0.01"
+                      min="0"
                       value={tip}
                       onChange={(e) => updateTipAndTotal(e.target.value)}
                       onBlur={(e) => handleTipBlur(e.target.value)}
+                      onFocus={(e) => e.target.select()}
                     />
+                    <span className="implied-percent">
+                      {impliedPercentages.tip}
+                    </span>
                   </div>
                 </div>
 
@@ -654,8 +666,10 @@ Implied Tip (%): ${((tip / calculatedSubtotal) * 100).toFixed(1)}%`;
                 </div>
 
                 <div className="summary-row total-row">
-                  <span data-tooltip="Final amount including tax and tip">Total:</span>
-                  <span className="calculated-value">{formatPrice(total)}</span>
+                  <span data-tooltip="Final amount including tax and tip">Grand Total:</span>
+                  <div className="tax-input-group">
+                    <span className="calculated-value">${formatPrice(total)}</span>
+                  </div>
                 </div>
               </div>
             </div>

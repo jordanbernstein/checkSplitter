@@ -222,7 +222,7 @@ p {
   border-radius: 4px;
   padding: 5px 10px;
   cursor: pointer;
-  font-size: 14px;
+font-size: 14px;
 }
 
 .edit-toggle:hover {
@@ -260,8 +260,8 @@ p {
 }
 
 .check-item input:nth-child(2) {
-  flex: 1;
-  min-width: 100px;
+  flex: none;
+  width: 120px;
 }
 
 .check-item input {
@@ -275,23 +275,22 @@ p {
   flex: 1;
 }
 
-.check-item input[type="text"]:nth-child(2) {
+.check-item input[type="number"] {
   text-align: right;
-  width: 100px;
+  width: 120px;
+  padding: 8px;
   padding-right: 8px;
-}
-
-.check-summary {
-  margin-top: 20px;
-  border-top: 1px solid #dee2e6;
-  padding-top: 15px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 14px;
 }
 
 .summary-row {
-  display: flex;
-  align-items: center;
+  display: grid;
+  grid-template-columns: 1fr 120px 28px;
+  column-gap: 10px;
+  align-items: flex-start;
   margin-bottom: 10px;
-  gap: 10px;
 }
 
 .summary-row span {
@@ -305,17 +304,35 @@ p {
   padding-right: 8px;
 }
 
+.subtotal-row {
+  margin-top: 15px;
+  border-top: 2px solid #dee2e6;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  font-weight: bold;
+}
+
 .total-row {
   margin-top: 15px;
-  border-top: 1px solid #dee2e6;
-  padding-top: 15px;
+  border-top: 2px solid #dee2e6;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  font-weight: bold;
+}
+
+.calculated-value {
+  display: block;
+  width: 75px;
+  border-radius: 4px;
+  text-align: right;
+  padding-right: 8px;
   font-weight: bold;
 }
 
 /* Tip Calculator */
 .tip-calculator {
-  margin: 15px 0 15px auto;
-  padding: 12px 14px;
+  margin: 15px 38px 20px auto;
+  padding: 12px 20px;
   background-color: #f8f9fa;
   border-radius: 6px;
   border: 1px solid #e9ecef;
@@ -603,9 +620,10 @@ footer {
   color: white;
   border: none;
   border-radius: 4px;
-  padding: 8px 15px;
-  margin-top: 10px;
+  padding: 8px 50px;
   cursor: pointer;
+  margin: 10px auto;
+  display: block;
 }
 
 /* Modal Styles */
@@ -825,22 +843,21 @@ button:active:not(:disabled) {
 
 .tax-input-group {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 1;
-  justify-content: flex-end;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  width: 120px;
 }
 
 .implied-percent {
   color: #6c757d;
-  font-size: 0.9em;
-  min-width: 60px;
+  font-size: 12px;
   text-align: right;
   font-style: italic;
 }
 
 .tax-input-group input {
-  width: 100px;
+  width: 120px;
   padding: 8px;
   border: 1px solid #ced4da;
   border-radius: 4px;
