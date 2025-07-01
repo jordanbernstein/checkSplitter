@@ -92,6 +92,105 @@ function App() {
   };
 
   // Process image with OCR
+  // Conservative autocrop function
+  const autocropImage = (canvas, ctx) => {
+    const width = canvas.width;
+    const height = canvas.height;
+    const imageData = ctx.getImageData(0, 0, width, height);
+    const data = imageData.data;
+    
+    // Calculate content density in grid sections
+    const gridSize = 20; // 20x20 grid for analysis
+    const sectionWidth = Math.floor(width / gridSize);
+    const sectionHeight = Math.floor(height / gridSize);
+    
+    let minX = width, maxX = 0, minY = height, maxY = 0;
+    let hasContent = false;
+    
+    // Analyze each grid section for content
+    for (let gridY = 0; gridY < gridSize; gridY++) {
+      for (let gridX = 0; gridX < gridSize; gridX++) {
+        const startX = gridX * sectionWidth;
+        const startY = gridY * sectionHeight;
+        const endX = Math.min(startX + sectionWidth, width);
+        const endY = Math.min(startY + sectionHeight, height);
+        
+        let variation = 0;
+        let pixelCount = 0;
+        let avgBrightness = 0;
+        
+        // Calculate pixel variation and brightness in this section
+        for (let y = startY; y < endY; y++) {
+          for (let x = startX; x < endX; x++) {
+            const idx = (y * width + x) * 4;
+            const brightness = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
+            avgBrightness += brightness;
+            pixelCount++;
+            
+            // Check variation with neighboring pixels
+            if (x < endX - 1) {
+              const nextIdx = (y * width + x + 1) * 4;
+              const nextBrightness = (data[nextIdx] + data[nextIdx + 1] + data[nextIdx + 2]) / 3;
+              variation += Math.abs(brightness - nextBrightness);
+            }
+          }
+        }
+        
+        avgBrightness /= pixelCount;
+        variation /= pixelCount;
+        
+        // Consider section as having content if:
+        // 1. High variation (text creates edges)
+        // 2. Not too bright (not blank background)
+        // 3. Not too dark (not solid background)
+        const hasContentHere = variation > 15 && avgBrightness > 50 && avgBrightness < 240;
+        
+        if (hasContentHere) {
+          minX = Math.min(minX, startX);
+          maxX = Math.max(maxX, endX);
+          minY = Math.min(minY, startY);
+          maxY = Math.max(maxY, endY);
+          hasContent = true;
+        }
+      }
+    }
+    
+    // Conservative cropping: only crop if we found content and it's reasonable
+    if (hasContent) {
+      const contentWidth = maxX - minX;
+      const contentHeight = maxY - minY;
+      const originalArea = width * height;
+      const contentArea = contentWidth * contentHeight;
+      
+      // Only crop if content area is at least 30% of original (conservative)
+      if (contentArea / originalArea >= 0.3) {
+        // Add 10% padding around detected content
+        const paddingX = Math.floor(contentWidth * 0.1);
+        const paddingY = Math.floor(contentHeight * 0.1);
+        
+        const cropX = Math.max(0, minX - paddingX);
+        const cropY = Math.max(0, minY - paddingY);
+        const cropWidth = Math.min(width - cropX, contentWidth + paddingX * 2);
+        const cropHeight = Math.min(height - cropY, contentHeight + paddingY * 2);
+        
+        // Create new canvas with cropped content
+        const croppedCanvas = document.createElement('canvas');
+        const croppedCtx = croppedCanvas.getContext('2d');
+        croppedCanvas.width = cropWidth;
+        croppedCanvas.height = cropHeight;
+        
+        // Copy cropped region
+        const croppedImageData = ctx.getImageData(cropX, cropY, cropWidth, cropHeight);
+        croppedCtx.putImageData(croppedImageData, 0, 0);
+        
+        return { canvas: croppedCanvas, ctx: croppedCtx };
+      }
+    }
+    
+    // Return original if no good crop found
+    return { canvas, ctx };
+  };
+
   // Image preprocessing function
   const preprocessImage = (imageData) => {
     return new Promise((resolve) => {
@@ -106,23 +205,26 @@ function App() {
         // Draw original image
         ctx.drawImage(img, 0, 0);
         
-        // Get image data
-        const imageDataObj = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        // Step 1: Autocrop
+        const { canvas: croppedCanvas, ctx: croppedCtx } = autocropImage(canvas, ctx);
+        
+        // Step 2: Apply contrast and brightness to cropped image
+        const imageDataObj = croppedCtx.getImageData(0, 0, croppedCanvas.width, croppedCanvas.height);
         const data = imageDataObj.data;
         
         // Light preprocessing: increase contrast and brightness
         for (let i = 0; i < data.length; i += 4) {
-          // Increase contrast (factor of 1.2) and brightness (+10)
-          data[i] = Math.min(255, Math.max(0, (data[i] - 128) * 1.2 + 128 + 10));     // Red
-          data[i + 1] = Math.min(255, Math.max(0, (data[i + 1] - 128) * 1.2 + 128 + 10)); // Green  
-          data[i + 2] = Math.min(255, Math.max(0, (data[i + 2] - 128) * 1.2 + 128 + 10)); // Blue
+          // Increase contrast (factor of 1.2) and brightness (+20)
+          data[i] = Math.min(255, Math.max(0, (data[i] - 128) * 1.25 + 128 + 20));     // Red
+          data[i + 1] = Math.min(255, Math.max(0, (data[i + 1] - 128) * 1.25 + 128 + 20)); // Green  
+          data[i + 2] = Math.min(255, Math.max(0, (data[i + 2] - 128) * 1.25 + 128 + 20)); // Blue
         }
         
         // Put processed image data back
-        ctx.putImageData(imageDataObj, 0, 0);
+        croppedCtx.putImageData(imageDataObj, 0, 0);
         
         // Convert to blob and resolve
-        canvas.toBlob(resolve, 'image/png', 0.95);
+        croppedCanvas.toBlob(resolve, 'image/png', 0.95);
       };
       
       img.src = imageData;

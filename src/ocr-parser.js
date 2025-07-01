@@ -170,8 +170,9 @@ function findTaxAmount(text) {
         
         // Tax keywords that might appear without amounts on the same line
         const taxKeywords = [
-            'sales tax', 'tax amount', 'state tax', 'local tax', 'city tax', 
-            'county tax', 'service tax', 'hst', 'gst', 'pst', 'vat', 'tax'
+            'sales tax', 'sales taxes', 'tax amount', 'taxes amount', 'state tax', 'state taxes', 
+            'local tax', 'local taxes', 'city tax', 'city taxes', 'county tax', 'county taxes', 
+            'service tax', 'service taxes', 'hst', 'gst', 'pst', 'vat', 'tax', 'taxes'
         ];
         
         // Check if current line contains tax keyword
@@ -206,20 +207,27 @@ function findTaxAmount(text) {
     // Comprehensive same-line tax patterns (fallback)
     const taxPatterns = [
         /sales\s*tax.*?(\$?\s*\d+\.?\d{0,2})/i,
+        /sales\s*taxes.*?(\$?\s*\d+\.?\d{0,2})/i,
         /tax\s*amount.*?(\$?\s*\d+\.?\d{0,2})/i,
+        /taxes\s*amount.*?(\$?\s*\d+\.?\d{0,2})/i,
         /state\s*tax.*?(\$?\s*\d+\.?\d{0,2})/i,
+        /state\s*taxes.*?(\$?\s*\d+\.?\d{0,2})/i,
         /local\s*tax.*?(\$?\s*\d+\.?\d{0,2})/i,
+        /local\s*taxes.*?(\$?\s*\d+\.?\d{0,2})/i,
         /city\s*tax.*?(\$?\s*\d+\.?\d{0,2})/i,
+        /city\s*taxes.*?(\$?\s*\d+\.?\d{0,2})/i,
         /county\s*tax.*?(\$?\s*\d+\.?\d{0,2})/i,
+        /county\s*taxes.*?(\$?\s*\d+\.?\d{0,2})/i,
         /service\s*tax.*?(\$?\s*\d+\.?\d{0,2})/i,
+        /service\s*taxes.*?(\$?\s*\d+\.?\d{0,2})/i,
         /hst.*?(\$?\s*\d+\.?\d{0,2})/i,
         /gst.*?(\$?\s*\d+\.?\d{0,2})/i,
         /pst.*?(\$?\s*\d+\.?\d{0,2})/i,
         /vat.*?(\$?\s*\d+\.?\d{0,2})/i,
         /(\$?\s*\d+\.?\d{0,2}).*?tax/i,
+        /(\$?\s*\d+\.?\d{0,2}).*?taxes/i,
         /tax.*?(\$?\s*\d+\.?\d{0,2})/i,
-        /taxes.*?(\$?\s*\d+\.?\d{0,2})/i,
-        /(\$?\s*\d+\.?\d{0,2}).*?taxes/i
+        /taxes.*?(\$?\s*\d+\.?\d{0,2})/i
     ];
     
     // Search entire text for same-line patterns
