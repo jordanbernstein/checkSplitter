@@ -700,6 +700,8 @@ Implied Tip (%): ${((tip / calculatedSubtotal) * 100).toFixed(1)}%`;
                     />
                     <input
                       type="number"
+                      inputMode="decimal"
+                      pattern="[0-9]*\.?[0-9]*"
                       step="0.01"
                       min="0"
                       value={item.price}
@@ -739,6 +741,8 @@ Implied Tip (%): ${((tip / calculatedSubtotal) * 100).toFixed(1)}%`;
                   <div className="tax-input-group">
                     <input
                       type="number"
+                      inputMode="decimal"
+                      pattern="[0-9]*\.?[0-9]*"
                       step="0.01"
                       min="0"
                       value={tax}
@@ -756,6 +760,8 @@ Implied Tip (%): ${((tip / calculatedSubtotal) * 100).toFixed(1)}%`;
                   <div className="tax-input-group">
                     <input
                       type="number"
+                      inputMode="decimal"
+                      pattern="[0-9]*\.?[0-9]*"
                       step="0.01"
                       min="0"
                       value={tip}
