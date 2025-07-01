@@ -92,18 +92,58 @@ function App() {
   };
 
   // Process image with OCR
+  // Image preprocessing function
+  const preprocessImage = (imageData) => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      
+      img.onload = () => {
+        canvas.width = img.width;
+        canvas.height = img.height;
+        
+        // Draw original image
+        ctx.drawImage(img, 0, 0);
+        
+        // Get image data
+        const imageDataObj = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageDataObj.data;
+        
+        // Light preprocessing: increase contrast and brightness
+        for (let i = 0; i < data.length; i += 4) {
+          // Increase contrast (factor of 1.2) and brightness (+10)
+          data[i] = Math.min(255, Math.max(0, (data[i] - 128) * 1.2 + 128 + 10));     // Red
+          data[i + 1] = Math.min(255, Math.max(0, (data[i + 1] - 128) * 1.2 + 128 + 10)); // Green  
+          data[i + 2] = Math.min(255, Math.max(0, (data[i + 2] - 128) * 1.2 + 128 + 10)); // Blue
+        }
+        
+        // Put processed image data back
+        ctx.putImageData(imageDataObj, 0, 0);
+        
+        // Convert to blob and resolve
+        canvas.toBlob(resolve, 'image/png', 0.95);
+      };
+      
+      img.src = imageData;
+    });
+  };
+
   const processImage = useCallback(async (imageData) => {
     setIsProcessing(true);
     setOcrError(null);
     
     try {
+      // Preprocess image for better OCR
+      const preprocessedImage = await preprocessImage(imageData);
+      
       // Create worker with proper configuration
       const worker = await Tesseract.createWorker();
       await worker.loadLanguage('eng');
       await worker.initialize('eng');
       
-      // Perform recognition without custom logger
-      const result = await worker.recognize(imageData);
+      // Perform recognition with preprocessed image
+      const result = await worker.recognize(preprocessedImage);
       
       // Clean up worker
       await worker.terminate();
@@ -111,6 +151,9 @@ function App() {
       if (!result.data.text || result.data.text.trim() === '') {
         throw new Error('No text detected in the image');
       }
+      
+      // Debug: Log raw OCR output
+      console.log('Raw OCR Output:', result.data.text);
       
       // Parse OCR text to extract items
       const parsedData = parseCheckText(result.data.text);

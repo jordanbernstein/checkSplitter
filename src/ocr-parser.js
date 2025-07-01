@@ -21,10 +21,34 @@ export function parseCheckText(text) {
     const specialCharPattern = /^[_\-=*]+|[_\-=*]+$/g;
     const percentagePattern = /[\(\-]\s*(\d+(?:\.\d+)?%)\s*[\)\-]?/;
 
-    // Process each line
+    // First pass: identify potential section boundaries
+    let itemSectionEnd = -1;
+    let summarySection = [];
+    
+    // Look for patterns that indicate the end of items and start of summary
+    for (let i = 0; i < lines.length; i++) {
+        const lowerLine = lines[i].toLowerCase();
+        if (lowerLine.includes('subtotal') || 
+            lowerLine.includes('sub total') ||
+            lowerLine.includes('sub-total') ||
+            (lowerLine.includes('total') && !lowerLine.includes('grand')) ||
+            lowerLine.match(/^tax/) ||
+            lowerLine.includes('sales tax') ||
+            lowerLine.match(/^tip/) ||
+            lines[i].match(/^[\-_=\*]{3,}/) || // separator lines
+            lowerLine.match(/^total\s*$/)) {
+            if (itemSectionEnd === -1) {
+                itemSectionEnd = i;
+            }
+            summarySection.push(i);
+        }
+    }
+
+    // Process each line with section awareness
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
         const lowerLine = line.toLowerCase();
+        const isInSummarySection = itemSectionEnd !== -1 && i >= itemSectionEnd;
         
         // Find all price matches in the line
         const priceMatches = [...line.matchAll(pricePattern)];
@@ -51,31 +75,63 @@ export function parseCheckText(text) {
                 continue;
             }
 
-            // Handle special items
-            if (lowerLine.includes('subtotal')) {
+            // Handle special items (prioritize summary section detection)
+            if (lowerLine.includes('subtotal') || lowerLine.includes('sub total') || lowerLine.includes('sub-total')) {
                 subtotalAmount = price;
                 continue;
             }
-            if (lowerLine.match(/^tax\b/)) {
+            if (lowerLine.match(/^tax\b/) || 
+                lowerLine.includes('sales tax') || 
+                lowerLine.includes('tax amount') ||
+                lowerLine.includes('state tax') ||
+                lowerLine.includes('local tax') ||
+                lowerLine.includes('city tax') ||
+                lowerLine.includes('county tax') ||
+                lowerLine.includes('service tax') ||
+                lowerLine.includes('hst') ||
+                lowerLine.includes('gst') ||
+                lowerLine.includes('pst') ||
+                lowerLine.includes('vat') ||
+                lowerLine.match(/\btax\s*\d+\.?\d*%?/) ||
+                lowerLine.match(/\d+\.?\d*%?\s*tax/) ||
+                lowerLine.match(/taxes?\s*$/) ||
+                lowerLine.match(/^taxes?\b/)) {
                 taxAmount = price;
                 continue;
             }
-            if (lowerLine.match(/^tip\b/)) {
+            if (lowerLine.match(/^tip\b/) || lowerLine.includes('gratuity')) {
                 tipAmount = price;
                 continue;
             }
-            if (lowerLine.match(/^total\b/)) {
+            if (lowerLine.match(/^total\b/) || lowerLine.includes('grand total') || lowerLine.includes('amount due')) {
                 totalAmount = price;
                 continue;
             }
 
-            // Add as regular item (including health mandate and service charge)
-            items.push({
-                id: `item-${items.length + 1}`,
-                name: itemName,
-                price: price
-            });
+            // If we're in the summary section, be more cautious about adding items
+            if (isInSummarySection) {
+                // Only add as item if it doesn't look like a summary line
+                if (!lowerLine.match(/\b(sub|total|tax|tip|gratuity|amount|due|balance|change)\b/)) {
+                    items.push({
+                        id: `item-${items.length + 1}`,
+                        name: itemName,
+                        price: price
+                    });
+                }
+            } else {
+                // Add as regular item (including health mandate and service charge)
+                items.push({
+                    id: `item-${items.length + 1}`,
+                    name: itemName,
+                    price: price
+                });
+            }
         }
+    }
+    
+    // Post-processing: dedicated tax search if not found during main parsing
+    if (taxAmount === 0) {
+        taxAmount = findTaxAmount(text);
     }
     
     // Calculate missing values if possible
@@ -97,4 +153,89 @@ export function parseCheckText(text) {
         tip: tipAmount,
         total: totalAmount
     };
+}
+
+/**
+ * Dedicated function to search for tax amounts in OCR text
+ * This runs as a fallback when tax isn't found during main parsing
+ */
+function findTaxAmount(text) {
+    const lines = text.split('\n').map(line => line.trim()).filter(line => line);
+    const pricePattern = /\$?\s*(\d+\.?\d{0,2})/; // More flexible - allows whole numbers and decimals
+    
+    // Multi-line tax parsing - check lines after tax keywords
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const lowerLine = line.toLowerCase();
+        
+        // Tax keywords that might appear without amounts on the same line
+        const taxKeywords = [
+            'sales tax', 'tax amount', 'state tax', 'local tax', 'city tax', 
+            'county tax', 'service tax', 'hst', 'gst', 'pst', 'vat', 'tax'
+        ];
+        
+        // Check if current line contains tax keyword
+        const foundTaxKeyword = taxKeywords.some(keyword => lowerLine.includes(keyword));
+        
+        if (foundTaxKeyword) {
+            // First try to find amount on the same line
+            const sameLineMatch = line.match(pricePattern);
+            if (sameLineMatch && sameLineMatch[1] !== '0' && sameLineMatch[1] !== '0.00') {
+                const amount = parseFloat(sameLineMatch[1]);
+                if (amount > 0) {
+                    return amount;
+                }
+            }
+            
+            // If no amount on same line, check next 2 lines
+            for (let j = i + 1; j <= Math.min(i + 2, lines.length - 1); j++) {
+                const nextLine = lines[j];
+                const nextLineMatch = nextLine.match(pricePattern);
+                
+                if (nextLineMatch) {
+                    const amount = parseFloat(nextLineMatch[1]);
+                    // Reasonable tax amount validation (between $0.01 and $999.99)
+                    if (amount > 0 && amount < 1000) {
+                        return amount;
+                    }
+                }
+            }
+        }
+    }
+    
+    // Comprehensive same-line tax patterns (fallback)
+    const taxPatterns = [
+        /sales\s*tax.*?(\$?\s*\d+\.?\d{0,2})/i,
+        /tax\s*amount.*?(\$?\s*\d+\.?\d{0,2})/i,
+        /state\s*tax.*?(\$?\s*\d+\.?\d{0,2})/i,
+        /local\s*tax.*?(\$?\s*\d+\.?\d{0,2})/i,
+        /city\s*tax.*?(\$?\s*\d+\.?\d{0,2})/i,
+        /county\s*tax.*?(\$?\s*\d+\.?\d{0,2})/i,
+        /service\s*tax.*?(\$?\s*\d+\.?\d{0,2})/i,
+        /hst.*?(\$?\s*\d+\.?\d{0,2})/i,
+        /gst.*?(\$?\s*\d+\.?\d{0,2})/i,
+        /pst.*?(\$?\s*\d+\.?\d{0,2})/i,
+        /vat.*?(\$?\s*\d+\.?\d{0,2})/i,
+        /(\$?\s*\d+\.?\d{0,2}).*?tax/i,
+        /tax.*?(\$?\s*\d+\.?\d{0,2})/i,
+        /taxes.*?(\$?\s*\d+\.?\d{0,2})/i,
+        /(\$?\s*\d+\.?\d{0,2}).*?taxes/i
+    ];
+    
+    // Search entire text for same-line patterns
+    const fullText = text.toLowerCase();
+    for (const pattern of taxPatterns) {
+        const match = fullText.match(pattern);
+        if (match) {
+            const priceMatch = match[1].match(/(\d+\.?\d{0,2})/);
+            if (priceMatch) {
+                const amount = parseFloat(priceMatch[1]);
+                if (amount > 0) {
+                    return amount;
+                }
+            }
+        }
+    }
+    
+    return 0;
 }
