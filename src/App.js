@@ -286,24 +286,41 @@ function App() {
         }
       }
 
+      console.log('Camera stream obtained:', stream);
       setCameraStream(stream);
       setShowCamera(true);
       
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        
-        // Wait for video to be ready
-        videoRef.current.onloadedmetadata = () => {
-          videoRef.current.play().then(() => {
-            // Start edge detection processing after video starts
-            setTimeout(() => startEdgeDetection(), 500);
-          }).catch(playError => {
-            console.error('Error playing video:', playError);
-            alert('Unable to start camera preview. Please use file upload instead.');
-            stopCamera();
-          });
-        };
-      }
+      // Wait for video element to be rendered, then set up stream
+      const setupVideo = () => {
+        if (videoRef.current) {
+          console.log('Setting video srcObject');
+          videoRef.current.srcObject = stream;
+          
+          // Wait for video to be ready
+          videoRef.current.onloadedmetadata = () => {
+            console.log('Video metadata loaded, attempting to play');
+            videoRef.current.play().then(() => {
+              console.log('Video playing successfully');
+              // Start edge detection processing after video starts
+              setTimeout(() => startEdgeDetection(), 500);
+            }).catch(playError => {
+              console.error('Error playing video:', playError);
+              alert('Unable to start camera preview. Please use file upload instead.');
+              stopCamera();
+            });
+          };
+          
+          videoRef.current.onerror = (error) => {
+            console.error('Video element error:', error);
+          };
+        } else {
+          console.log('Video ref still null, retrying in 100ms');
+          setTimeout(setupVideo, 100);
+        }
+      };
+      
+      // Give React time to render the video element
+      setTimeout(setupVideo, 100);
     } catch (err) {
       console.error('Error accessing camera:', err);
       let errorMessage = 'Unable to access camera. ';
@@ -1084,9 +1101,6 @@ Implied Tip (%): ${((tip / calculatedSubtotal) * 100).toFixed(1)}%`;
             
             <div className="camera-container">
               <video ref={videoRef} autoPlay playsInline className="camera-video" />
-              <div className="simple-receipt-overlay">
-                <div className="receipt-guide-frame"></div>
-              </div>
               <canvas ref={overlayCanvasRef} className="detection-overlay" style={{ display: 'none' }} />
               <canvas ref={canvasRef} style={{ display: 'none' }} />
             </div>
