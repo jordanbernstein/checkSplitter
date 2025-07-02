@@ -858,7 +858,6 @@ Implied Tip (%): ${((tip / calculatedSubtotal) * 100).toFixed(1)}%`;
             </div>
             
             <div className="camera-controls">
-              <button onClick={stopCamera} className="cancel-btn">Cancel</button>
               <button 
                 onClick={captureReceipt} 
                 className="manual-capture-btn"

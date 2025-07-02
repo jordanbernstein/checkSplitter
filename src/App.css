@@ -48,6 +48,7 @@ body {
   justify-content: center;
   z-index: 6;
   transition: all 0.2s ease;
+  pointer-events: auto;
 }
 
 .close-camera:hover {
@@ -85,29 +86,12 @@ body {
   left: 50%;
   transform: translateX(-50%);
   display: flex;
-  gap: 20px;
+  justify-content: center;
   z-index: 5;
   pointer-events: auto;
 }
 
-.cancel-btn {
-  background: #f44336;
-  color: white;
-  border: none;
-  padding: 8px 24px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  font-weight: 500;
-  height: 36px;
-}
 
-.cancel-btn:hover {
-  background: #d32f2f;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-}
 
 .manual-capture-btn {
   background: #2196F3;
@@ -166,7 +150,7 @@ body {
 
 .camera-instruction {
   position: absolute;
-  top: 8%;
+  top: 2%;
   left: 50%;
   transform: translateX(-50%);
   color: white;
@@ -240,7 +224,6 @@ body {
   
   .camera-controls {
     bottom: calc(env(safe-area-inset-bottom) + 5px);
-    gap: 16px;
   }
   
   .camera-instruction {
@@ -248,7 +231,7 @@ body {
     padding: 6px 12px;
   }
   
-  .cancel-btn, .manual-capture-btn {
+  .manual-capture-btn {
     padding: 6px 20px;
     font-size: 14px;
     height: 32px;
@@ -276,6 +259,7 @@ body {
     width: 36px;
     height: 36px;
     font-size: 20px;
+    pointer-events: auto;
   }
 }
 
