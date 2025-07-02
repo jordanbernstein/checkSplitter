@@ -27,10 +27,6 @@ function App() {
   // Camera capture states
   const [showCamera, setShowCamera] = useState(false);
   const [cameraStream, setCameraStream] = useState(null);
-  const [edgeDetectionCanvas, setEdgeDetectionCanvas] = useState(null);
-  const [detectionConfidence, setDetectionConfidence] = useState(0);
-  const [consecutiveFrames, setConsecutiveFrames] = useState(0);
-  const [qualityIssues, setQualityIssues] = useState([]);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const overlayCanvasRef = useRef(null);
@@ -305,8 +301,6 @@ function App() {
             console.log('Video metadata loaded, attempting to play');
             videoRef.current.play().then(() => {
               console.log('Video playing successfully');
-              // Start edge detection processing after video starts
-              setTimeout(() => startEdgeDetection(), 500);
             }).catch(playError => {
               console.error('Error playing video:', playError);
               alert('Unable to start camera preview. Please use file upload instead.');
@@ -349,295 +343,27 @@ function App() {
       setCameraStream(null);
     }
     setShowCamera(false);
-    setDetectionConfidence(0);
-    setConsecutiveFrames(0);
-    setQualityIssues([]);
   };
 
-  // Edge detection with Canvas processing
-  const detectEdges = (canvas, ctx, width, height) => {
-    const imageData = ctx.getImageData(0, 0, width, height);
-    const data = imageData.data;
-    
-    // Convert to grayscale and apply edge detection
-    const gray = new Uint8ClampedArray(width * height);
-    for (let i = 0; i < data.length; i += 4) {
-      const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
-      gray[i / 4] = avg;
-    }
-    
-    // Simple edge detection using Sobel-like filter
-    const edges = new Uint8ClampedArray(width * height);
-    for (let y = 1; y < height - 1; y++) {
-      for (let x = 1; x < width - 1; x++) {
-        const idx = y * width + x;
-        const gx = gray[idx - width - 1] + 2 * gray[idx - 1] + gray[idx + width - 1] -
-                   gray[idx - width + 1] - 2 * gray[idx + 1] - gray[idx + width + 1];
-        const gy = gray[idx - width - 1] + 2 * gray[idx - width] + gray[idx - width + 1] -
-                   gray[idx + width - 1] - 2 * gray[idx + width] - gray[idx + width + 1];
-        edges[idx] = Math.sqrt(gx * gx + gy * gy);
-      }
-    }
-    
-    // Find rectangular contours (simplified)
-    return findReceiptContour(edges, width, height);
-  };
 
-  const findReceiptContour = (edges, width, height) => {
-    // Simplified contour detection - find strong edges that form rectangle
-    const points = [];
-    const threshold = 50;
-    
-    // Scan for strong edges
-    for (let y = 0; y < height; y += 10) {
-      for (let x = 0; x < width; x += 10) {
-        if (edges[y * width + x] > threshold) {
-          points.push([x, y]);
-        }
-      }
-    }
-    
-    if (points.length < 4) return null;
-    
-    // Find approximate corners (top-left, top-right, bottom-right, bottom-left)
-    points.sort((a, b) => a[0] + a[1] - (b[0] + b[1])); // Top-left first
-    const topLeft = points[0];
-    
-    points.sort((a, b) => (b[0] - a[1]) - (a[0] - b[1])); // Top-right
-    const topRight = points[0];
-    
-    points.sort((a, b) => (b[0] + b[1]) - (a[0] + a[1])); // Bottom-right
-    const bottomRight = points[0];
-    
-    points.sort((a, b) => (a[0] - b[1]) - (b[0] - a[1])); // Bottom-left
-    const bottomLeft = points[0];
-    
-    const corners = [topLeft, topRight, bottomRight, bottomLeft];
-    
-    // Calculate confidence based on rectangle quality
-    const confidence = calculateReceiptConfidence(corners, width, height);
-    
-    return { corners, confidence };
-  };
 
-  const calculateReceiptConfidence = (corners, width, height) => {
-    if (!corners || corners.length !== 4) return 0;
-    
-    // Check if corners form a reasonable rectangle
-    const [tl, tr, br, bl] = corners;
-    
-    // Calculate area
-    const area = Math.abs((tr[0] - tl[0]) * (bl[1] - tl[1]));
-    const imageArea = width * height;
-    const areaRatio = area / imageArea;
-    
-    // Receipt should be significant portion of image
-    if (areaRatio < 0.1 || areaRatio > 0.9) return 0;
-    
-    // Check aspect ratio (receipts are typically taller than wide)
-    const receiptWidth = Math.abs(tr[0] - tl[0]);
-    const receiptHeight = Math.abs(bl[1] - tl[1]);
-    const aspectRatio = receiptHeight / receiptWidth;
-    
-    if (aspectRatio < 1.2 || aspectRatio > 4) return 0.3; // Lower confidence for unusual ratios
-    
-    return Math.min(0.9, areaRatio * 2); // Max confidence 0.9
-  };
 
-  const startEdgeDetection = () => {
-    let frameCount = 0;
-    
-    const processFrame = () => {
-      if (!showCamera || !videoRef.current || !canvasRef.current) return;
-      
-      frameCount++;
-      
-      // Process every 3rd frame for performance
-      if (frameCount % 3 === 0) {
-        const video = videoRef.current;
-        const canvas = canvasRef.current;
-        const ctx = canvas.getContext('2d');
-        
-        canvas.width = video.videoWidth || 640;
-        canvas.height = video.videoHeight || 480;
-        
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        
-        // Perform edge detection
-        const detection = detectEdges(canvas, ctx, canvas.width, canvas.height);
-        
-        if (detection) {
-          setDetectionConfidence(detection.confidence);
-          
-          // Draw overlay on overlay canvas
-          drawDetectionOverlay(detection.corners, detection.confidence);
-          
-          // Check for auto-capture
-          if (detection.confidence > 0.8) {
-            setConsecutiveFrames(prev => prev + 1);
-            
-            if (consecutiveFrames >= 4) { // 5 consecutive frames
-              captureReceipt(detection.corners);
-              return;
-            }
-          } else {
-            setConsecutiveFrames(0);
-          }
-        }
-        
-        // Quality checks
-        performQualityChecks(canvas, ctx);
-      }
-      
-      if (showCamera) {
-        requestAnimationFrame(processFrame);
-      }
-    };
-    
-    requestAnimationFrame(processFrame);
-  };
-
-  const drawDetectionOverlay = (corners, confidence) => {
-    if (!overlayCanvasRef.current || !corners) return;
-    
-    const overlay = overlayCanvasRef.current;
-    const ctx = overlay.getContext('2d');
-    
-    // Match video dimensions
-    if (videoRef.current) {
-      overlay.width = videoRef.current.videoWidth || 640;
-      overlay.height = videoRef.current.videoHeight || 480;
-    }
-    
-    ctx.clearRect(0, 0, overlay.width, overlay.height);
-    
-    // Draw polygon
-    ctx.beginPath();
-    ctx.moveTo(corners[0][0], corners[0][1]);
-    corners.forEach(corner => ctx.lineTo(corner[0], corner[1]));
-    ctx.closePath();
-    
-    // Style based on confidence
-    const color = confidence > 0.8 ? 'rgba(0, 255, 0, 0.8)' : 'rgba(255, 165, 0, 0.8)';
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 3;
-    ctx.stroke();
-    
-    // Draw corner points
-    ctx.fillStyle = color;
-    corners.forEach(corner => {
-      ctx.beginPath();
-      ctx.arc(corner[0], corner[1], 8, 0, 2 * Math.PI);
-      ctx.fill();
-    });
-  };
-
-  const performQualityChecks = (canvas, ctx) => {
-    const issues = [];
-    
-    // Blur detection (edge sharpness)
-    const blurScore = calculateBlurScore(canvas, ctx);
-    if (blurScore < 0.3) issues.push('Image appears blurry - hold camera steady');
-    
-    // Glare detection (overexposed areas)
-    const glareScore = calculateGlareScore(canvas, ctx);
-    if (glareScore > 0.7) issues.push('Too much glare - adjust lighting or angle');
-    
-    // Luminance analysis
-    const luminance = calculateLuminance(canvas, ctx);
-    if (luminance < 0.2 && glareScore < 0.3) {
-      issues.push('Lighting too dark - consider using flash');
-    }
-    
-    setQualityIssues(issues);
-  };
-
-  const calculateBlurScore = (canvas, ctx) => {
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const data = imageData.data;
-    
-    let edgeCount = 0;
-    let sharpEdges = 0;
-    
-    // Sample edges for sharpness
-    for (let i = 0; i < data.length; i += 400) { // Sample every 100 pixels
-      if (i + 4 < data.length) {
-        const current = (data[i] + data[i + 1] + data[i + 2]) / 3;
-        const next = (data[i + 4] + data[i + 5] + data[i + 6]) / 3;
-        const diff = Math.abs(current - next);
-        
-        if (diff > 20) {
-          edgeCount++;
-          if (diff > 50) sharpEdges++;
-        }
-      }
-    }
-    
-    return edgeCount > 0 ? sharpEdges / edgeCount : 0;
-  };
-
-  const calculateGlareScore = (canvas, ctx) => {
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const data = imageData.data;
-    
-    let overexposedPixels = 0;
-    let totalPixels = data.length / 4;
-    
-    for (let i = 0; i < data.length; i += 4) {
-      const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
-      if (brightness > 240) overexposedPixels++;
-    }
-    
-    return overexposedPixels / totalPixels;
-  };
-
-  const calculateLuminance = (canvas, ctx) => {
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const data = imageData.data;
-    
-    let totalBrightness = 0;
-    const pixelCount = data.length / 4;
-    
-    for (let i = 0; i < data.length; i += 4) {
-      totalBrightness += (data[i] + data[i + 1] + data[i + 2]) / 3;
-    }
-    
-    return (totalBrightness / pixelCount) / 255;
-  };
-
-  const captureReceipt = async (corners) => {
-    if (!canvasRef.current || !corners) return;
+  const captureReceipt = async () => {
+    if (!canvasRef.current || !videoRef.current) return;
     
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
+    const video = videoRef.current;
     
-    // Create perspective-corrected image
-    const correctedCanvas = document.createElement('canvas');
-    correctedCanvas.width = 2500;
-    correctedCanvas.height = 3500; // Typical receipt aspect ratio
-    const correctedCtx = correctedCanvas.getContext('2d');
+    // Set canvas size to match video
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
     
-    // Apply perspective correction (simplified transformation)
-    const [tl, tr, br, bl] = corners;
-    
-    // For simplicity, use basic crop instead of full perspective correction
-    const minX = Math.min(tl[0], tr[0], br[0], bl[0]);
-    const maxX = Math.max(tl[0], tr[0], br[0], bl[0]);
-    const minY = Math.min(tl[1], tr[1], br[1], bl[1]);
-    const maxY = Math.max(tl[1], tr[1], br[1], bl[1]);
-    
-    const cropWidth = maxX - minX;
-    const cropHeight = maxY - minY;
-    
-    // Draw cropped and scaled image
-    correctedCtx.drawImage(
-      canvas, 
-      minX, minY, cropWidth, cropHeight,
-      0, 0, correctedCanvas.width, correctedCanvas.height
-    );
+    // Draw the current video frame to canvas
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     
     // Convert to blob and process
-    correctedCanvas.toBlob(async (blob) => {
+    canvas.toBlob(async (blob) => {
       const imageUrl = URL.createObjectURL(blob);
       setCheckImage(imageUrl);
       stopCamera();
@@ -1123,48 +849,21 @@ Implied Tip (%): ${((tip / calculatedSubtotal) * 100).toFixed(1)}%`;
             
             <div className="camera-container">
               <video ref={videoRef} autoPlay playsInline className="camera-video" />
+              <div className="camera-overlay">
+                <div className="camera-instruction">Position receipt inside frame</div>
+                <div className="receipt-frame-guide"></div>
+              </div>
               <canvas ref={overlayCanvasRef} className="detection-overlay" style={{ display: 'none' }} />
               <canvas ref={canvasRef} style={{ display: 'none' }} />
-            </div>
-            
-            <div className="camera-info">
-              <div className="detection-status">
-                {detectionConfidence > 0.8 ? (
-                  <span className="status-good">✓ Receipt detected - Auto-capturing...</span>
-                ) : detectionConfidence > 0.4 ? (
-                  <span className="status-partial">⚠ Position receipt fully in frame</span>
-                ) : (
-                  <span className="status-searching">🔍 Searching for receipt...</span>
-                )}
-              </div>
-              
-              {qualityIssues.length > 0 && (
-                <div className="quality-alerts">
-                  {qualityIssues.map((issue, index) => (
-                    <div key={index} className="quality-alert">⚠ {issue}</div>
-                  ))}
-                </div>
-              )}
-              
-              <div className="camera-progress">
-                <div className="confidence-bar">
-                  <div 
-                    className="confidence-fill" 
-                    style={{ width: `${detectionConfidence * 100}%` }}
-                  />
-                </div>
-                <span>Confidence: {Math.round(detectionConfidence * 100)}%</span>
-              </div>
             </div>
             
             <div className="camera-controls">
               <button onClick={stopCamera} className="cancel-btn">Cancel</button>
               <button 
-                onClick={() => captureReceipt(null)} 
+                onClick={captureReceipt} 
                 className="manual-capture-btn"
-                disabled={detectionConfidence < 0.3}
               >
-                Capture Now
+                Capture Photo
               </button>
             </div>
           </div>
