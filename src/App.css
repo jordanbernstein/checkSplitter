@@ -76,11 +76,14 @@ body {
 }
 
 .camera-controls {
+  position: absolute;
+  bottom: 8%;
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
-  justify-content: space-between;
-  padding: 20px;
-  padding-bottom: calc(20px + env(safe-area-inset-bottom));
-  background: rgba(0, 0, 0, 0.8);
+  gap: 20px;
+  z-index: 5;
+  pointer-events: auto;
 }
 
 .cancel-btn {
@@ -91,6 +94,14 @@ body {
   border-radius: 8px;
   cursor: pointer;
   font-size: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  font-weight: 500;
+}
+
+.cancel-btn:hover {
+  background: #d32f2f;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
 .manual-capture-btn {
@@ -101,6 +112,14 @@ body {
   border-radius: 8px;
   cursor: pointer;
   font-size: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  font-weight: 500;
+}
+
+.manual-capture-btn:hover {
+  background: #1976D2;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
 .manual-capture-btn:disabled {
@@ -210,11 +229,8 @@ body {
   }
   
   .camera-controls {
-    padding: 8px 16px;
-    padding-bottom: calc(8px + env(safe-area-inset-bottom));
-    min-height: 60px;
-    position: relative;
-    bottom: 0;
+    bottom: 10%;
+    gap: 16px;
   }
   
   .camera-instruction {
@@ -223,9 +239,13 @@ body {
   }
   
   .cancel-btn, .manual-capture-btn {
-    padding: 8px 16px;
+    padding: 10px 20px;
     font-size: 14px;
-    min-height: 40px;
+    min-height: 44px;
+    border-radius: 12px;
+    min-width: 100px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4);
+    font-weight: 600;
   }
 }
 
