@@ -28,27 +28,31 @@ body {
   flex-direction: column;
 }
 
-.camera-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 15px 20px;
-  background: rgba(0, 0, 0, 0.8);
-  color: white;
-}
 
-.camera-header h2 {
-  margin: 0;
-  font-size: 18px;
-}
 
 .close-camera {
-  background: none;
+  position: absolute;
+  top: 15px;
+  right: 20px;
+  background: rgba(0, 0, 0, 0.7);
   border: none;
   color: white;
   font-size: 24px;
   cursor: pointer;
-  padding: 5px;
+  padding: 8px;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 6;
+  transition: all 0.2s ease;
+}
+
+.close-camera:hover {
+  background: rgba(0, 0, 0, 0.9);
+  transform: scale(1.1);
 }
 
 .camera-container {
@@ -193,19 +197,19 @@ body {
   bottom: 0;
   left: 0;
   width: 100%;
-  height: calc(env(safe-area-inset-bottom) + 46px);
+  height: calc(env(safe-area-inset-bottom) + 52px);
 }
 
 .blur-left {
   top: 5px;
-  bottom: calc(env(safe-area-inset-bottom) + 46px);
+  bottom: calc(env(safe-area-inset-bottom) + 52px);
   left: 0;
   width: 15%; /* (100% - 70%) / 2 */
 }
 
 .blur-right {
   top: 5px;
-  bottom: calc(env(safe-area-inset-bottom) + 46px);
+  bottom: calc(env(safe-area-inset-bottom) + 52px);
   right: 0;
   width: 15%; /* (100% - 70%) / 2 */
 }
@@ -213,7 +217,7 @@ body {
 .receipt-frame-guide {
   position: absolute;
   top: 5px;
-  bottom: calc(env(safe-area-inset-bottom) + 46px);
+  bottom: calc(env(safe-area-inset-bottom) + 52px);
   left: 50%;
   transform: translateX(-50%);
   width: 70%;
@@ -255,15 +259,23 @@ body {
   }
   
   .receipt-frame-guide {
-    bottom: calc(env(safe-area-inset-bottom) + 42px);
+    bottom: calc(env(safe-area-inset-bottom) + 48px);
   }
   
   .blur-bottom {
-    height: calc(env(safe-area-inset-bottom) + 42px);
+    height: calc(env(safe-area-inset-bottom) + 48px);
   }
   
   .blur-left, .blur-right {
-    bottom: calc(env(safe-area-inset-bottom) + 42px);
+    bottom: calc(env(safe-area-inset-bottom) + 48px);
+  }
+  
+  .close-camera {
+    top: 10px;
+    right: 15px;
+    width: 36px;
+    height: 36px;
+    font-size: 20px;
   }
 }
 

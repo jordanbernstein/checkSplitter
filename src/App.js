@@ -842,14 +842,10 @@ Implied Tip (%): ${((tip / calculatedSubtotal) * 100).toFixed(1)}%`;
         {/* Camera Capture Interface */}
         {showCamera && (
           <div className="camera-interface">
-            <div className="camera-header">
-              <h2>Position Receipt in Frame</h2>
-              <button onClick={stopCamera} className="close-camera">✕</button>
-            </div>
-            
             <div className="camera-container">
               <video ref={videoRef} autoPlay playsInline className="camera-video" />
               <div className="camera-overlay">
+                <button onClick={stopCamera} className="close-camera">✕</button>
                 <div className="camera-instruction">Position receipt inside frame</div>
                 <div className="blur-overlay blur-top"></div>
                 <div className="blur-overlay blur-bottom"></div>
@@ -867,7 +863,7 @@ Implied Tip (%): ${((tip / calculatedSubtotal) * 100).toFixed(1)}%`;
                 onClick={captureReceipt} 
                 className="manual-capture-btn"
               >
-                Capture Photo
+                Capture
               </button>
             </div>
           </div>
