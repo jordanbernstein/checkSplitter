@@ -12,6 +12,7 @@ export function parseCheckText(text) {
     // Initialize return values
     const items = [];
     let taxAmount = 0;
+    let serviceFeeAmount = 0;
     let totalAmount = 0;
     let subtotalAmount = 0;
     let tipAmount = 0;
@@ -99,6 +100,17 @@ export function parseCheckText(text) {
                 taxAmount = price;
                 continue;
             }
+            if (lowerLine.includes('service fee') || 
+                lowerLine.includes('service charge') || 
+                lowerLine.includes('auto gratuity') ||
+                lowerLine.includes('auto grat') ||
+                lowerLine.includes('service') && lowerLine.includes('fee') ||
+                lowerLine.includes('mandatory') && lowerLine.includes('service') ||
+                lowerLine.match(/^service\b/) ||
+                lowerLine.match(/\bfee\s*$/) && lowerLine.includes('service')) {
+                serviceFeeAmount = price;
+                continue;
+            }
             if (lowerLine.match(/^tip\b/) || lowerLine.includes('gratuity')) {
                 tipAmount = price;
                 continue;
@@ -111,7 +123,7 @@ export function parseCheckText(text) {
             // If we're in the summary section, be more cautious about adding items
             if (isInSummarySection) {
                 // Only add as item if it doesn't look like a summary line
-                if (!lowerLine.match(/\b(sub|total|tax|tip|gratuity|amount|due|balance|change)\b/)) {
+                if (!lowerLine.match(/\b(sub|total|tax|tip|gratuity|service|fee|amount|due|balance|change)\b/)) {
                     items.push({
                         id: `item-${items.length + 1}`,
                         name: itemName,
@@ -144,12 +156,13 @@ export function parseCheckText(text) {
     
     // If we have no total but have all components, calculate it
     if (totalAmount === 0 && subtotalAmount > 0) {
-        totalAmount = subtotalAmount + taxAmount + tipAmount;
+        totalAmount = subtotalAmount + taxAmount + serviceFeeAmount + tipAmount;
     }
     
     return {
         items,
         tax: taxAmount,
+        serviceFee: serviceFeeAmount,
         tip: tipAmount,
         total: totalAmount
     };

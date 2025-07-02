@@ -10,6 +10,7 @@ function App() {
   const [checkImage, setCheckImage] = useState(null);
   const [extractedItems, setExtractedItems] = useState([]);
   const [tax, setTax] = useState('0.00'); // Default tax amount
+  const [serviceFee, setServiceFee] = useState('0.00'); // Default service fee amount
   const [tip, setTip] = useState('0.00');
   const [total, setTotal] = useState('0.00');
   const [subtotal, setSubtotal] = useState('0.00');
@@ -49,21 +50,23 @@ function App() {
   useEffect(() => {
     setSubtotal(calculatedSubtotal);
     const taxNum = parseFloat(tax) || 0;
+    const serviceFeeNum = parseFloat(serviceFee) || 0;
     const tipNum = parseFloat(tip) || 0;
-    const totalNum = parseFloat(calculatedSubtotal) + taxNum + tipNum;
+    const totalNum = parseFloat(calculatedSubtotal) + taxNum + serviceFeeNum + tipNum;
     setTotal(totalNum.toFixed(2));
-  }, [calculatedSubtotal, tax, tip]);
+  }, [calculatedSubtotal, tax, serviceFee, tip]);
 
   // Recalculate tip when tax inclusion preference changes
   useEffect(() => {
     if (selectedTipPercentage !== null) {
       const subtotalNum = parseFloat(calculatedSubtotal) || 0;
       const taxNum = parseFloat(tax) || 0;
+      const serviceFeeNum = parseFloat(serviceFee) || 0;
       
       if (subtotalNum > 0) {
         let baseAmount;
         if (tipIncludesTax) {
-          baseAmount = subtotalNum + taxNum;
+          baseAmount = subtotalNum + taxNum + serviceFeeNum;
         } else {
           baseAmount = subtotalNum;
         }
@@ -73,16 +76,17 @@ function App() {
         setTip(formattedTip);
       }
     }
-  }, [tipIncludesTax, selectedTipPercentage, calculatedSubtotal, tax]);
+  }, [tipIncludesTax, selectedTipPercentage, calculatedSubtotal, tax, serviceFee]);
 
   // Memoize implied percentages
   const impliedPercentages = useMemo(() => {
-    if (calculatedSubtotal <= 0) return { tax: '', tip: '' };
+    if (calculatedSubtotal <= 0) return { tax: '', serviceFee: '', tip: '' };
     return {
       tax: `% Subtotal: ${((tax / calculatedSubtotal) * 100).toFixed(1)}%`,
+      serviceFee: `% Subtotal: ${((serviceFee / calculatedSubtotal) * 100).toFixed(1)}%`,
       tip: `% Subtotal: ${((tip / calculatedSubtotal) * 100).toFixed(1)}%`
     };
-  }, [calculatedSubtotal, tax, tip]);
+  }, [calculatedSubtotal, tax, serviceFee, tip]);
 
   // Handle drag events
   const handleDragEnter = (e) => {
@@ -688,8 +692,8 @@ function App() {
         
         setSubtotal(calculatedSubtotal);
         if (parsedData.tax > 0) setTax(parseFloat(parsedData.tax).toFixed(2));
+        if (parsedData.serviceFee > 0) setServiceFee(parseFloat(parsedData.serviceFee).toFixed(2));
         setTip(initialTip);
-        setTotal(calculatedSubtotal + (parsedData.tax || tax) + initialTip);
         
         // Initialize assigned items
         const initialAssignments = Object.fromEntries(
@@ -793,6 +797,7 @@ function App() {
         items: [],
         itemTotal: 0,
         taxShare: 0,
+        serviceFeeShare: 0,
         tipShare: 0,
         total: 0
       };
@@ -820,7 +825,7 @@ function App() {
       }
     });
     
-    // Calculate tax and tip shares
+    // Calculate tax, service fee, and tip shares
     const totalItemsCost = Object.values(split).reduce(
       (sum, person) => sum + person.itemTotal, 0
     );
@@ -830,10 +835,12 @@ function App() {
         if (split[member].itemTotal > 0) {
           const proportion = split[member].itemTotal / totalItemsCost;
           split[member].taxShare = parseFloat((tax * proportion).toFixed(2));
+          split[member].serviceFeeShare = parseFloat((serviceFee * proportion).toFixed(2));
           split[member].tipShare = parseFloat((tip * proportion).toFixed(2));
           split[member].total = parseFloat((
             split[member].itemTotal + 
             split[member].taxShare + 
+            split[member].serviceFeeShare + 
             split[member].tipShare
           ).toFixed(2));
         }
@@ -841,7 +848,7 @@ function App() {
     }
     
     return split;
-  }, [partyMembers, extractedItems, assignedItems, tax, tip]);
+  }, [partyMembers, extractedItems, assignedItems, tax, serviceFee, tip]);
 
   // Use memoized calculation in the calculateSplit handler
   const calculateSplit = useCallback(() => {
@@ -928,6 +935,12 @@ function App() {
     setTax(newTax);
   };
 
+  // Update service fee and total
+  const updateServiceFeeAndTotal = (newServiceFee) => {
+    setServiceFee(newServiceFee);
+    setSelectedTipPercentage(null); // Clear selection when manually editing
+  };
+
   // Update tip and total
   const updateTipAndTotal = (newTip) => {
     setTip(newTip);
@@ -940,6 +953,12 @@ function App() {
     setTax(formatPrice(taxNum));
   };
 
+  // Handle service fee blur
+  const handleServiceFeeBlur = (value) => {
+    const serviceFeeNum = parseFloat(value) || 0;
+    setServiceFee(formatPrice(serviceFeeNum));
+  };
+
   // Handle tip blur
   const handleTipBlur = (value) => {
     const tipNum = parseFloat(value) || 0;
@@ -950,13 +969,14 @@ function App() {
   const calculateTipFromPercentage = (percentage) => {
     const subtotalNum = parseFloat(calculatedSubtotal) || 0;
     const taxNum = parseFloat(tax) || 0;
+    const serviceFeeNum = parseFloat(serviceFee) || 0;
     
     // Don't calculate if no subtotal
     if (subtotalNum <= 0) return;
     
     let baseAmount;
     if (tipIncludesTax) {
-      baseAmount = subtotalNum + taxNum;
+      baseAmount = subtotalNum + taxNum + serviceFeeNum;
     } else {
       baseAmount = subtotalNum;
     }
@@ -977,10 +997,12 @@ function App() {
     return `splityourcheck.com\n\n${Object.entries(finalSplit).map(([name, data]) => `${name}:
 Items: ${data.items.map(item => `\n  - ${item.name}: $${item.price.toFixed(2)} (Your share: $${item.share.toFixed(2)})`).join('')}
 Tax Share: $${data.taxShare.toFixed(2)}
+Service Fee Share: $${data.serviceFeeShare.toFixed(2)}
 Tip Share: $${data.tipShare.toFixed(2)}
 Total: $${data.total.toFixed(2)}`).join('\n\n')}
 
 Implied Tax (%): ${((tax / calculatedSubtotal) * 100).toFixed(1)}%
+Implied Service Fee (%): ${((serviceFee / calculatedSubtotal) * 100).toFixed(1)}%
 Implied Tip (%): ${((tip / calculatedSubtotal) * 100).toFixed(1)}%`;
   };
 
@@ -1231,6 +1253,25 @@ Implied Tip (%): ${((tip / calculatedSubtotal) * 100).toFixed(1)}%`;
                   </div>
                 </div>
                 <div className="summary-row">
+                  <span data-tooltip="Mandatory service fee (common in SF)">Service Fee:</span>
+                  <div className="tax-input-group">
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      pattern="[0-9]*\.?[0-9]*"
+                      step="0.01"
+                      min="0"
+                      value={serviceFee}
+                      onChange={(e) => updateServiceFeeAndTotal(e.target.value)}
+                      onBlur={(e) => handleServiceFeeBlur(e.target.value)}
+                      onFocus={(e) => e.target.select()}
+                    />
+                    <span className="implied-percent">
+                      {impliedPercentages.serviceFee}
+                    </span>
+                  </div>
+                </div>
+                <div className="summary-row">
                   <span data-tooltip="Tip amount for service">Tip:</span>
                   <div className="tax-input-group">
                     <input
@@ -1262,7 +1303,7 @@ Implied Tip (%): ${((tip / calculatedSubtotal) * 100).toFixed(1)}%`;
                           checked={tipIncludesTax}
                           onChange={(e) => setTipIncludesTax(e.target.checked)}
                         />
-                        <span>Tip percentage includes tax</span>
+                        <span>Tip percentage includes tax and service fee</span>
                       </label>
                     </div>
                     <div className="tip-buttons">
@@ -1292,7 +1333,7 @@ Implied Tip (%): ${((tip / calculatedSubtotal) * 100).toFixed(1)}%`;
                 </div>
 
                 <div className="summary-row total-row">
-                  <span data-tooltip="Final amount including tax and tip">Grand Total:</span>
+                  <span data-tooltip="Final amount including tax, service fee and tip">Grand Total:</span>
                   <div className="tax-input-group">
                     <span className="calculated-value">${formatPrice(total)}</span>
                   </div>
@@ -1408,6 +1449,10 @@ Implied Tip (%): ${((tip / calculatedSubtotal) * 100).toFixed(1)}%`;
                       <div className="breakdown-row">
                         <span>Tax:</span>
                         <span>{formatCurrency(person.taxShare)}</span>
+                      </div>
+                      <div className="breakdown-row">
+                        <span>Service Fee:</span>
+                        <span>{formatCurrency(person.serviceFeeShare)}</span>
                       </div>
                       <div className="breakdown-row">
                         <span>Tip:</span>
