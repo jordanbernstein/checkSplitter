@@ -851,6 +851,10 @@ Implied Tip (%): ${((tip / calculatedSubtotal) * 100).toFixed(1)}%`;
               <video ref={videoRef} autoPlay playsInline className="camera-video" />
               <div className="camera-overlay">
                 <div className="camera-instruction">Position receipt inside frame</div>
+                <div className="blur-overlay blur-top"></div>
+                <div className="blur-overlay blur-bottom"></div>
+                <div className="blur-overlay blur-left"></div>
+                <div className="blur-overlay blur-right"></div>
                 <div className="receipt-frame-guide"></div>
               </div>
               <canvas ref={overlayCanvasRef} className="detection-overlay" style={{ display: 'none' }} />
