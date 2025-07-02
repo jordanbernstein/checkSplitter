@@ -21,6 +21,7 @@ body {
   left: 0;
   width: 100vw;
   height: 100vh;
+  height: 100dvh; /* Dynamic viewport height for mobile */
   background: #000;
   z-index: 1000;
   display: flex;
@@ -202,9 +203,18 @@ body {
 
 /* Mobile responsive fixes */
 @media (max-width: 768px) {
+  .camera-interface {
+    height: 100vh;
+    height: 100dvh;
+    height: -webkit-fill-available; /* Safari iOS compatibility */
+  }
+  
   .camera-controls {
-    padding: 10px 20px;
-    padding-bottom: calc(10px + env(safe-area-inset-bottom));
+    padding: 8px 16px;
+    padding-bottom: calc(8px + env(safe-area-inset-bottom));
+    min-height: 60px;
+    position: relative;
+    bottom: 0;
   }
   
   .camera-instruction {
@@ -213,8 +223,17 @@ body {
   }
   
   .cancel-btn, .manual-capture-btn {
-    padding: 10px 16px;
+    padding: 8px 16px;
     font-size: 14px;
+    min-height: 40px;
+  }
+}
+
+/* Additional fix for iOS Safari */
+@media (max-width: 768px) and (-webkit-min-device-pixel-ratio: 1) {
+  .camera-interface {
+    height: calc(100vh - env(keyboard-inset-height, 0px));
+    height: calc(100dvh - env(keyboard-inset-height, 0px));
   }
 }
 
